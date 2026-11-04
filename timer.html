@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تایمر اینتروال</title>
+<style>
+:root{--bg:#eef3f7;--ink:#14202b;--mute:#52637a;--line:#c3d0dc;--field:#fff;--on:#fff;--idle:#14202b;--work:#c2255c;--rest:#087f8c;--setrest:#4263eb;--done:#237a35;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1722;--ink:#e8eef5;--mute:#93a4b8;--line:#2a3a4d;--field:#162333;--on:#0e1722;--idle:#e8eef5;--work:#ff6b9a;--rest:#3dd6d0;--setrest:#8da2ff;--done:#6fdc8c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1722;--ink:#e8eef5;--mute:#93a4b8;--line:#2a3a4d;--field:#162333;--on:#0e1722;--idle:#e8eef5;--work:#ff6b9a;--rest:#3dd6d0;--setrest:#8da2ff;--done:#6fdc8c;color-scheme:dark}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:400 16px/1.6 Vazirmatn,system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;--ring:var(--idle);--mix:34%}
+body[data-phase=idle]{--mix:0%}
+body[data-phase=work]{--ring:var(--work)}
+body[data-phase=rest]{--ring:var(--rest)}
+body[data-phase=setrest]{--ring:var(--setrest)}
+body[data-phase=done]{--ring:var(--done)}
+.fill{position:fixed;inset:0;z-index:0;pointer-events:none;background:color-mix(in srgb,var(--ring) var(--mix),transparent);transform-origin:bottom;transition:transform .1s linear,background .3s}
+.app{position:relative;z-index:1;max-width:440px;margin:0 auto;padding:28px 20px 56px}
+.stage{text-align:center}
+.phase{font-size:2.2rem;font-weight:800;color:var(--ring);line-height:1.4}
+.time{font-size:clamp(5rem,30vw,9.5rem);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em;margin:4px 0 14px}
+.counts{display:flex;justify-content:center;gap:48px}
+.counts div{display:grid}
+.counts b{font-size:1.7rem;font-weight:700;line-height:1.3}
+.counts span,.total{color:var(--mute);font-size:.9rem}
+.total{margin:16px 0 24px}
+.ctrl{display:flex;gap:10px}
+.primary{flex:1;height:64px;border:0;border-radius:18px;background:var(--ring);color:var(--on);font:800 1.25rem Vazirmatn,system-ui,Tahoma,sans-serif;cursor:pointer}
+.sec{height:64px;padding:0 18px;border:1.5px solid var(--line);border-radius:32px;background:transparent;color:var(--ink);font:700 .95rem Vazirmatn,system-ui,Tahoma,sans-serif;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ring);outline-offset:2px}
+.cfg{margin-top:48px}
+.cfg h2{font-size:1.1rem;font-weight:800;margin:0 0 4px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+input[type=number]{width:92px;box-sizing:border-box;padding:8px;font:700 1.1rem Vazirmatn,system-ui,Tahoma,sans-serif;text-align:center;color:var(--ink);background:var(--field);border:1.5px solid var(--line);border-radius:8px}
+input[type=checkbox]{width:24px;height:24px;accent-color:var(--ring)}
+input:disabled{opacity:.5}
+@media (prefers-reduced-motion:reduce){.fill{transition:none}}
+</style>
+</head>
+<body data-phase="idle">
+<div class="fill" id="fill"></div>
+<main class="app">
+  <section class="stage">
+    <div class="phase" id="phase"></div>
+    <div class="time" id="time" dir="ltr">00:00</div>
+    <div class="counts">
+      <div><b id="stepN" dir="ltr"></b><span>مرحله</span></div>
+      <div><b id="setN" dir="ltr"></b><span>ست</span></div>
+    </div>
+    <div class="total" id="total"></div>
+    <div class="ctrl">
+      <button class="primary" id="go"></button>
+      <button class="sec" id="skip">مرحله بعد</button>
+      <button class="sec" id="rst">از نو</button>
+    </div>
+  </section>
+  <section class="cfg">
+    <h2>تنظیمات</h2>
+    <label class="row">زمان هر مرحله (ثانیه)<input type="number" data-k="time" min="1" max="3600" value="15" inputmode="numeric"></label>
+    <label class="row">تعداد مرحله در هر ست<input type="number" data-k="steps" min="1" max="99" value="6" inputmode="numeric"></label>
+    <label class="row">تعداد ست<input type="number" data-k="sets" min="1" max="99" value="4" inputmode="numeric"></label>
+    <label class="row">استراحت بین مرحله&zwnj;ها (ثانیه)<input type="number" data-k="rest" min="0" max="3600" value="5" inputmode="numeric"></label>
+    <label class="row">استراحت بین ست&zwnj;ها (ثانیه)<input type="number" data-k="setRest" min="0" max="3600" value="30" inputmode="numeric"></label>
+    <label class="row">صدا<input type="checkbox" id="snd" checked></label>
+  </section>
+</main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const fill=$('fill'),phaseEl=$('phase'),timeEl=$('time'),stepEl=$('stepN'),setEl=$('setN'),totalEl=$('total'),go=$('go'),snd=$('snd');
+const inputs=[...document.querySelectorAll('input[data-k]')];
+const L={work:'کار',rest:'استراحت',setrest:'استراحت بین ست\u200cها'};
+let P=[],N=0,M=0,i=0,rem=0,endAt=0,lastSec=-1,state='idle',timer,ac;
+
+const fmt=ms=>{const s=Math.ceil(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const sum=a=>a.reduce((t,p)=>t+p.d,0);
+function cfg(){const c={};inputs.forEach(e=>{let v=parseInt(e.value,10);if(isNaN(v))v=+e.defaultValue;c[e.dataset.k]=Math.min(+e.max,Math.max(+e.min,v))});return c}
+
+function beep(f,d=.12,v=.2){
+  if(!snd.checked)return;
+  try{
+    ac=ac||new(window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==='suspended')ac.resume();
+    const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;
+    o.frequency.value=f;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d);
+  }catch(e){}
+}
+const cue=t=>beep(t==='work'?988:t==='rest'?523:392,t==='work'?.3:.2);
+
+function render(){
+  const idle=state==='idle',done=state==='done',cur=idle?P[0]:P[i];
+  const left=idle?cur.d:done?0:rem,frac=idle||done?1:left/cur.d;
+  document.body.dataset.phase=done?'done':idle?'idle':cur.t;
+  phaseEl.textContent=done?'تمام شد':idle?'آماده':L[cur.t]+(state==='pause'?' (مکث)':'');
+  timeEl.textContent=fmt(left);
+  fill.style.transform='scaleY('+frac+')';
+  stepEl.textContent=(done?N:cur.k)+'/'+N;
+  setEl.textContent=(done?M:cur.s)+'/'+M;
+  totalEl.textContent=(idle?'مجموع: ':'باقی\u200cمانده: ')+fmt(idle?sum(P):done?0:sum(P.slice(i+1))+left);
+  go.textContent=state==='run'?'مکث':state==='pause'?'ادامه':done?'شروع دوباره':'شروع';
+}
+
+function reset(){
+  clearInterval(timer);state='idle';
+  const c=cfg();N=c.steps;M=c.sets;P=[];
+  for(let s=1;s<=M;s++){
+    for(let k=1;k<=N;k++){
+      P.push({t:'work',s,k,d:c.time*1000});
+      if(k<N&&c.rest)P.push({t:'rest',s,k:k+1,d:c.rest*1000});
+    }
+    if(s<M&&c.setRest)P.push({t:'setrest',s:s+1,k:1,d:c.setRest*1000});
+  }
+  i=0;rem=P[0].d;lastSec=-1;
+  inputs.forEach(e=>e.disabled=false);
+  render();
+}
+function finish(){
+  clearInterval(timer);state='done';i=P.length-1;rem=0;
+  inputs.forEach(e=>e.disabled=false);
+  [0,1,2].forEach(n=>setTimeout(()=>beep(784+n*196,.2,.25),n*240));
+  render();
+}
+function next(){
+  if(++i>=P.length){finish();return false}
+  endAt+=P[i].d;lastSec=-1;cue(P[i].t);return true;
+}
+function tick(){
+  const now=performance.now();rem=endAt-now;
+  while(rem<=0){if(!next())return;rem=endAt-now}
+  const s=Math.ceil(rem/1000);
+  if(s!==lastSec){if(s<=3&&P[i].d>3000)beep(700,.08);lastSec=s}
+  render();
+}
+function toggle(){
+  if(state==='run'){clearInterval(timer);rem=Math.max(0,endAt-performance.now());state='pause'}
+  else{
+    if(state==='done')reset();
+    if(state==='idle'){const c=cfg();inputs.forEach(e=>{e.value=c[e.dataset.k];e.disabled=true});cue('work')}
+    endAt=performance.now()+rem;state='run';timer=setInterval(tick,100);
+  }
+  render();
+}
+function skip(){
+  if(state==='idle'||state==='done')return;
+  endAt=performance.now();
+  if(next()){rem=P[i].d;render()}
+}
+
+go.onclick=toggle;$('skip').onclick=skip;$('rst').onclick=reset;
+inputs.forEach(e=>{
+  e.addEventListener('input',()=>{if(state==='idle'||state==='done')reset()});
+  e.addEventListener('change',()=>{const c=cfg();inputs.forEach(x=>x.value=c[x.dataset.k]);reset()});
+});
+reset();
+})();
+</script>
+</body>
+</html>
