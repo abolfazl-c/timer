@@ -94,6 +94,7 @@ const sum=a=>a.reduce((t,p)=>t+p.d,0);
 function cfg(){const c={};inputs.forEach(e=>{let v=parseInt(e.value,10);if(isNaN(v))v=+e.defaultValue;c[e.dataset.k]=Math.min(+e.max,Math.max(+e.min,v))});return c}
 
 function beep(f,d=.12,v=.2){
+  v = Math.min(1, v + 0.5);
   if(!snd.checked)return;
   try{
     ac=ac||new(window.AudioContext||window.webkitAudioContext)();
