@@ -1,0 +1,9 @@
+{
+  "name": "gym timer",
+  "short_name": "gym timer",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff"
+}
