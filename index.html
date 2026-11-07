@@ -2,7 +2,23 @@
 <html lang="fa" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="./manifest.webmanifest">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style"
+      content="default">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1">
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js");
+  });
+}
+</script>
+  
 <title>تایمر اینتروال</title>
 <style>
 :root{--bg:#eef3f7;--ink:#14202b;--mute:#52637a;--line:#c3d0dc;--field:#fff;--on:#fff;--idle:#14202b;--work:#c2255c;--rest:#087f8c;--setrest:#4263eb;--done:#237a35;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
